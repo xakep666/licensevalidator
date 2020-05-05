@@ -1,0 +1,36 @@
+Debug = true
+
+[Cache]
+  Type = "memory"
+
+[GoProxy]
+  BaseURL = "https://proxy.golang.org"
+
+[[PathOverrides]]
+  Match = "^go.uber.org/(.*)$"
+  Replace = "github.com/uber-go/$1"
+
+[Server]
+  ListenAddr = ":8080"
+  EnablePprof = true
+
+[Validation]
+  ConfidenceThreshold = 0.8
+  UnknownLicenseAction = "allow"
+
+  [Validation.RuleSet]
+
+    [[Validation.RuleSet.BlacklistedModules]]
+      Name = "rsc.io/pdf"
+      VersionConstraint = "<1.0.0"
+
+    [[Validation.RuleSet.DeniedLicenses]]
+      Name = ""
+      SPDXID = "AGPL-3.0"
+
+    [[Validation.RuleSet.WhitelistedModules]]
+      Name = "^gitlab.mycorp.com/.*"
+
+    [[Validation.RuleSet.WhitelistedModules]]
+      Name = "github.com/user/repo"
+      VersionConstraint = ">=1.0.0"
