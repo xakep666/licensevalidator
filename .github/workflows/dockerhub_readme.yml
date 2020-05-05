@@ -10,7 +10,9 @@ jobs:
     name: Update Dockerhub README
     runs-on: ubuntu-latest
     steps:
-      - name: Docker Hub Description
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Update Docker Hub Description
         uses: peter-evans/dockerhub-description@v2.1.1
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKER_USERNAME }}
