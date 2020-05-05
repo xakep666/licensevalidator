@@ -2,12 +2,14 @@ name: Docker Image CI/CD
 
 on:
   push:
+    branches: [ master ]
     tags:
       - v0.*
       - v1.*
 
 jobs:
   build-and-publish:
+    name: Build and publish docker image
     runs-on: ubuntu-latest
     steps:
       - name: Build and push Docker images
