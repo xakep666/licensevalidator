@@ -4,6 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/xakep666/licensevalidator)](https://goreportcard.com/report/github.com/xakep666/licensevalidator)
 [![codecov](https://codecov.io/gh/xakep666/licensevalidator/branch/master/graph/badge.svg)](https://codecov.io/gh/xakep666/licensevalidator)
 [![Docker Pulls](https://img.shields.io/docker/pulls/xakep666/licensevalidator.svg)](https://img.shields.io/docker/pulls/xakep666/licensevalidator.svg)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fxakep666%2Flicensevalidator.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fxakep666%2Flicensevalidator?ref=badge_shield)
 
 ## Why?
 Direct or transitive dependencies may have license like [AGPL-3.0](https://spdx.org/licenses/AGPL-3.0.html) that enforces user to open-source product.
@@ -29,6 +30,9 @@ This hook called each time when user tries to download module through Athens. Th
 * Multiple sources of license detection:
     * Github for modules hosted on it. Has fallback to [go-license-detector](godoc.org/gopkg.in/src-d/go-license-detector.v3)
     * Detection using module zip from proxy.golang.org with [go-license-detector](godoc.org/gopkg.in/src-d/go-license-detector.v3) without downloading whole zip
+
+
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fxakep666%2Flicensevalidator.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fxakep666%2Flicensevalidator?ref=badge_large)
 
 ## Running
 * Direct install:
