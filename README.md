@@ -4,6 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/xakep666/licensevalidator)](https://goreportcard.com/report/github.com/xakep666/licensevalidator)
 [![codecov](https://codecov.io/gh/xakep666/licensevalidator/branch/master/graph/badge.svg)](https://codecov.io/gh/xakep666/licensevalidator)
 [![Docker Pulls](https://img.shields.io/docker/pulls/xakep666/licensevalidator.svg)](https://img.shields.io/docker/pulls/xakep666/licensevalidator.svg)
+![Build](https://github.com/xakep666/licensevalidator/workflows/Go/badge.svg)
 
 ## Why?
 Direct or transitive dependencies may have license like [AGPL-3.0](https://spdx.org/licenses/AGPL-3.0.html) that enforces user to open-source product.
@@ -25,7 +26,7 @@ This hook called each time when user tries to download module through Athens. Th
 * Configurable behaviour for modules with non-determined license:
     * Allow such modules
     * Deny such modules
-* Dealing with vanity servers (servers needed for decoupling module name from repository like gopkg.in). Project supports gopkg.in, golang.org/x and go.googlesource.com out of the box. Other rewrite rules can be added through config
+* Dealing with vanity servers (servers needed for decoupling module name from repository like `gopkg.in`). Project supports `gopkg.in`, `golang.org/x` and `go.googlesource.com` out of the box. Other rewrite rules can be added through config
 * Multiple sources of license detection:
     * Github for modules hosted on it. Has fallback to [go-license-detector](godoc.org/gopkg.in/src-d/go-license-detector.v3)
     * Detection using module zip from proxy.golang.org with [go-license-detector](godoc.org/gopkg.in/src-d/go-license-detector.v3) without downloading whole zip
