@@ -2,7 +2,6 @@ name: Docker Image CI/CD
 
 on:
   push:
-    branches: [ master ]
     tags:
       - v0.*
       - v1.*
