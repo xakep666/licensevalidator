@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Report Card](https://goreportcard.com/badge/github.com/xakep666/licensevalidator)](https://goreportcard.com/report/github.com/xakep666/licensevalidator)
 [![codecov](https://codecov.io/gh/xakep666/licensevalidator/branch/master/graph/badge.svg)](https://codecov.io/gh/xakep666/licensevalidator)
-[![Docker Pulls](https://img.shields.io/docker/pulls/xakep666/licensevalidator.svg)](https://img.shields.io/docker/pulls/xakep666/licensevalidator.svg)
+[![Docker Pulls](https://img.shields.io/docker/pulls/xakep666/licensevalidator.svg)](https://hub.docker.com/repository/docker/xakep666/licensevalidator)
 ![Build](https://github.com/xakep666/licensevalidator/workflows/Go/badge.svg)
 
 ## Why?
