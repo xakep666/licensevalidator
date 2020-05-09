@@ -119,6 +119,8 @@ func setupCache(cfg *Config, cacher cache.Cacher) (cache.Cacher, error) {
 		return &cache.MemoryCache{
 			Backed: cacher,
 		}, nil
+	case CacheTypeMemLRU:
+		return cache.NewMemLRU(cacher, cfg.Cache.SizeItems)
 	default:
 		return nil, fmt.Errorf("invalid cache type: %s", cfg.Cache.Type)
 	}

@@ -12,6 +12,7 @@ type CacheType string
 
 const (
 	CacheTypeMemory CacheType = "memory"
+	CacheTypeMemLRU CacheType = "memlru"
 )
 
 // Config is a top-level app config
@@ -38,8 +39,13 @@ type Config struct {
 // Cache represents cache configuration
 type Cache struct {
 	// Type is a cache type
-	// Available types: memory
+	// Available types:
+	// * memory
+	// * memlru (SizeItems required)
 	Type CacheType
+
+	// SizeItems is a maximum items count in memory lru cache
+	SizeItems int
 }
 
 // Github contains github client configuration

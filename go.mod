@@ -7,6 +7,7 @@ require (
 	github.com/avvmoto/buf-readerat v0.0.0-20171115124131-a17c8cb89270
 	github.com/docker/docker v0.7.3-0.20190506211059-b20a14b54661
 	github.com/google/go-github/v18 v18.2.0
+	github.com/hashicorp/golang-lru v0.5.4
 	github.com/pelletier/go-toml v1.7.0
 	github.com/stretchr/testify v1.5.1
 	github.com/testcontainers/testcontainers-go v0.5.1
