@@ -8,6 +8,7 @@ require (
 	github.com/docker/docker v0.7.3-0.20190506211059-b20a14b54661
 	github.com/google/go-github/v18 v18.2.0
 	github.com/hashicorp/golang-lru v0.5.4
+	github.com/mediocregopher/radix/v3 v3.5.0
 	github.com/pelletier/go-toml v1.7.0
 	github.com/stretchr/testify v1.5.1
 	github.com/testcontainers/testcontainers-go v0.5.1

@@ -11,6 +11,12 @@ import (
 	"net/url"
 	"regexp"
 
+	"github.com/Masterminds/semver/v3"
+	gh "github.com/google/go-github/v18/github"
+	"github.com/mediocregopher/radix/v3"
+	"go.uber.org/zap"
+	"golang.org/x/oauth2"
+
 	"github.com/xakep666/licensevalidator/pkg/athens"
 	"github.com/xakep666/licensevalidator/pkg/cache"
 	"github.com/xakep666/licensevalidator/pkg/github"
@@ -21,11 +27,6 @@ import (
 	"github.com/xakep666/licensevalidator/pkg/override"
 	"github.com/xakep666/licensevalidator/pkg/spdx"
 	"github.com/xakep666/licensevalidator/pkg/validation"
-
-	"github.com/Masterminds/semver/v3"
-	gh "github.com/google/go-github/v18/github"
-	"go.uber.org/zap"
-	"golang.org/x/oauth2"
 )
 
 type App struct {
@@ -109,6 +110,47 @@ func (a *App) Stop(ctx context.Context) error {
 	return a.server.Shutdown(ctx)
 }
 
+func setupRedis(cfg *Config) (radix.Client, error) {
+	addrs := cfg.Cache.Redis.Addrs
+	if len(addrs) == 0 {
+		return nil, fmt.Errorf("redis addres(es) required for using redis as cache")
+	}
+
+	var dialOpts []radix.DialOpt
+	if cfg.Cache.Redis.DB > 0 {
+		dialOpts = append(dialOpts, radix.DialSelectDB(cfg.Cache.Redis.DB))
+	}
+	if cfg.Cache.Redis.Password != "" {
+		dialOpts = append(dialOpts, radix.DialAuthPass(cfg.Cache.Redis.Password))
+	}
+	if cfg.Cache.Redis.ConnectTimeout > 0 {
+		dialOpts = append(dialOpts, radix.DialConnectTimeout(cfg.Cache.Redis.ConnectTimeout))
+	}
+	if cfg.Cache.Redis.ReadTimeout > 0 {
+		dialOpts = append(dialOpts, radix.DialReadTimeout(cfg.Cache.Redis.ReadTimeout))
+	}
+	if cfg.Cache.Redis.WriteTimeout > 0 {
+		dialOpts = append(dialOpts, radix.DialWriteTimeout(cfg.Cache.Redis.WriteTimeout))
+	}
+
+	customConnFunc := func(network, addr string) (radix.Conn, error) {
+		return radix.Dial(network, addr, dialOpts...)
+	}
+
+	poolSize := 10
+	if cfg.Cache.Redis.PoolSize > 0 {
+		poolSize = cfg.Cache.Redis.PoolSize
+	}
+
+	if len(addrs) == 1 {
+		return radix.NewPool("tcp", cfg.Cache.Redis.Addrs[0], poolSize, radix.PoolConnFunc(customConnFunc))
+	} else {
+		return radix.NewCluster(cfg.Cache.Redis.Addrs, radix.ClusterPoolFunc(func(network, addr string) (radix.Client, error) {
+			return radix.NewPool(network, addr, poolSize, radix.PoolConnFunc(customConnFunc))
+		}))
+	}
+}
+
 func setupCache(cfg *Config, cacher cache.Cacher) (cache.Cacher, error) {
 	if cfg.Cache == nil {
 		return cacher, nil
@@ -121,6 +163,16 @@ func setupCache(cfg *Config, cacher cache.Cacher) (cache.Cacher, error) {
 		}, nil
 	case CacheTypeMemLRU:
 		return cache.NewMemLRU(cacher, cfg.Cache.SizeItems)
+	case CacheTypeRedis:
+		redisClient, err := setupRedis(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("redis client setup failed: %w", err)
+		}
+		return &cache.RedisCache{
+			Backed: cacher,
+			Client: redisClient,
+			TTL:    cfg.Cache.Redis.TTL,
+		}, nil
 	default:
 		return nil, fmt.Errorf("invalid cache type: %s", cfg.Cache.Type)
 	}
