@@ -1,5 +1,7 @@
 package app
 
+import "time"
+
 type UnknownLicenseAction string
 
 const (
@@ -12,6 +14,8 @@ type CacheType string
 
 const (
 	CacheTypeMemory CacheType = "memory"
+	CacheTypeMemLRU CacheType = "memlru"
+	CacheTypeRedis  CacheType = "redis"
 )
 
 // Config is a top-level app config
@@ -38,8 +42,44 @@ type Config struct {
 // Cache represents cache configuration
 type Cache struct {
 	// Type is a cache type
-	// Available types: memory
+	// Available types:
+	// * memory
+	// * memlru (SizeItems required)
+	// * redis
 	Type CacheType
+
+	// SizeItems is a maximum items count in memory lru cache
+	SizeItems int
+
+	Redis Redis
+}
+
+// Redis represents redis configuration
+type Redis struct {
+	// Addrs is a slice of connection addresses
+	// If more than one provided cluster client will be used
+	Addrs []string
+
+	// TTL is optional ttl for keys. Keys will not expire when TTL is not set.
+	TTL time.Duration
+
+	// PoolSize is a connection pool size. Default value is 10
+	PoolSize int
+
+	// DB allows to select db number
+	DB int
+
+	// Password is an optional password
+	Password string
+
+	// ConnectTimeout is an optional connect timeout
+	ConnectTimeout time.Duration
+
+	// ReadTimeout is an optional timeout to receive data
+	ReadTimeout time.Duration
+
+	// WriteTimeout is an optional timeout to send data
+	WriteTimeout time.Duration
 }
 
 // Github contains github client configuration
