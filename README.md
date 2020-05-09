@@ -123,13 +123,3 @@ This project contains integration tests that uses [testcontainers-go](https://gi
 They can be skipped using `-short` flag. Correct running requires working Docker.
 For running tests inside container be sure that management is available inside container
 i.e docker socket bind-mounted into container `-v /var/run/docker.socket:/var/run/docker.socket` and network mode is `host`.
-
-## Plans
-- [ ] Notifying about unknown license
-- [ ] Better instrumentation: prometheus and opentelemetry
-- [ ] More cache variants: In-memory LRU, Redis
-- [ ] Live example to try project without installation
-- [ ] Be k8s-friendly: add proper liveness and readiness checks and helm chart
-- [ ] Improve performance for methods involving go-license-detector
-
-and more...
