@@ -14,6 +14,13 @@ import (
 	"github.com/Masterminds/semver/v3"
 	gh "github.com/google/go-github/v18/github"
 	"github.com/mediocregopher/radix/v3"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/exporters/trace/jaeger"
+	"go.opentelemetry.io/otel/exporters/trace/zipkin"
+	"go.opentelemetry.io/otel/plugin/othttp"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 
@@ -30,8 +37,9 @@ import (
 )
 
 type App struct {
-	logger *zap.Logger
-	server *http.Server
+	logger      *zap.Logger
+	server      *http.Server
+	tracerFlush func()
 }
 
 func NewApp(cfg Config) (*App, error) {
@@ -44,6 +52,11 @@ func NewApp(cfg Config) (*App, error) {
 
 	logger.Info("Running with config", zap.Reflect("config", cfg))
 
+	tracer, tracerFlush, err := setupTracer(&cfg, logger)
+	if err != nil {
+		return nil, fmt.Errorf("tracer setup failed: %w", err)
+	}
+
 	translator, err := translator(logger, &cfg)
 	if err != nil {
 		return nil, fmt.Errorf("translator init failed: %w", err)
@@ -52,8 +65,8 @@ func NewApp(cfg Config) (*App, error) {
 	c, err := setupCache(&cfg, cache.Direct{
 		LicenseResolver: &validation.ChainedLicenseResolver{
 			LicenseResolvers: []validation.LicenseResolver{
-				githubClient(logger, &cfg),
-				goproxyClient(logger, &cfg),
+				githubClient(logger, &cfg, tracer),
+				goproxyClient(logger, &cfg, tracer),
 			},
 		},
 	})
@@ -76,22 +89,32 @@ func NewApp(cfg Config) (*App, error) {
 	logger.Info("Found forbidden admission request sources", zap.Strings("sources", goproxyAddrs))
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/athens/admission", athens.AdmissionHandler(
-		&athens.InternalValidator{Validator: validator},
-		goproxyAddrs...,
-	))
+	observMiddleware := observ.Middleware(logger)
+	mux.Handle("/athens/admission",
+		othttp.NewHandler(
+			observMiddleware(
+				athens.AdmissionHandler(
+					&athens.InternalValidator{Validator: validator},
+					goproxyAddrs...,
+				),
+			),
+			"athens admission hook",
+			othttp.WithTracer(tracer),
+		),
+	)
 	addPprofHandlers(&cfg, mux)
 
 	return &App{
 		logger: logger,
 		server: &http.Server{
 			Addr:    cfg.Server.ListenAddr,
-			Handler: observ.Middleware(logger)(mux),
+			Handler: mux,
 			ErrorLog: func() *log.Logger {
 				l, _ := zap.NewStdLogAt(logger, zap.ErrorLevel)
 				return l
 			}(),
 		},
+		tracerFlush: tracerFlush,
 	}, nil
 }
 
@@ -107,6 +130,7 @@ func (a *App) Run() error {
 
 func (a *App) Stop(ctx context.Context) error {
 	a.logger.Info("Stopping")
+	defer a.tracerFlush()
 	return a.server.Shutdown(ctx)
 }
 
@@ -178,7 +202,7 @@ func setupCache(cfg *Config, cacher cache.Cacher) (cache.Cacher, error) {
 	}
 }
 
-func githubClient(log *zap.Logger, cfg *Config) *github.Client {
+func githubClient(log *zap.Logger, cfg *Config, tracer trace.Tracer) *github.Client {
 	httpClient := &http.Client{}
 
 	if cfg.Github.AccessToken != "" {
@@ -187,18 +211,29 @@ func githubClient(log *zap.Logger, cfg *Config) *github.Client {
 		}))
 	}
 
+	httpClient.Transport = &observ.TraceTransport{
+		RoundTripper: httpClient.Transport,
+		ServiceName:  "github",
+		Tracer:       tracer,
+	}
+
 	return github.NewClient(log, github.ClientParams{
 		Client:                      gh.NewClient(httpClient),
 		FallbackConfidenceThreshold: cfg.Validation.ConfidenceThreshold,
 	})
 }
 
-func goproxyClient(log *zap.Logger, cfg *Config) *goproxy.Client {
+func goproxyClient(log *zap.Logger, cfg *Config, tracer trace.Tracer) *goproxy.Client {
 	if cfg.GoProxy.BaseURL == "" {
 		cfg.GoProxy.BaseURL = "https://proxy.golang.org"
 	}
 	return goproxy.NewClient(log, goproxy.ClientParams{
-		HTTPClient:          &http.Client{},
+		HTTPClient: &http.Client{
+			Transport: &observ.TraceTransport{
+				ServiceName: "goproxy",
+				Tracer:      tracer,
+			},
+		},
 		BaseURL:             string(cfg.GoProxy.BaseURL),
 		ConfidenceThreshold: cfg.Validation.ConfidenceThreshold,
 	})
@@ -359,5 +394,61 @@ func addPprofHandlers(cfg *Config, mux *http.ServeMux) {
 		mux.HandleFunc("/pprof/profile", pprof.Profile)
 		mux.HandleFunc("/pprof/symbol", pprof.Symbol)
 		mux.HandleFunc("/pprof/trace", pprof.Trace)
+	}
+}
+
+func setupTracer(cfg *Config, logger *zap.Logger) (tracer trace.Tracer, flush func(), err error) {
+	if cfg.Trace == nil {
+		return trace.NoopTracer{}, func() {}, nil
+	}
+
+	sampler := sdktrace.AlwaysSample()
+	if cfg.Trace.SampleProbability > 0 {
+		sampler = sdktrace.ProbabilitySampler(cfg.Trace.SampleProbability)
+	}
+
+	switch cfg.Trace.TracerType {
+	case JaegerTracer:
+		logger := logger.With(zap.String("component", "jaeger_exporter"))
+		jt, flush, err := jaeger.NewExportPipeline(
+			jaeger.WithCollectorEndpoint(cfg.Trace.CollectorAddress),
+			jaeger.WithProcess(jaeger.Process{
+				ServiceName: "licensevalidator",
+				Tags: []core.KeyValue{
+					key.String("exporter", "jaeger"),
+				},
+			}),
+			jaeger.RegisterAsGlobal(),
+			jaeger.WithSDK(&sdktrace.Config{DefaultSampler: sampler}),
+			jaeger.WithOnError(func(err error) {
+				logger.Error("span upload failed", zap.Error(err))
+			}),
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("jaeger setup failed: %w", err)
+		}
+
+		return jt.Tracer(""), flush, nil
+	case ZipkinTracer:
+		zexp, err := zipkin.NewExporter(
+			cfg.Trace.CollectorAddress,
+			"licensevalidator",
+			zipkin.WithLogger(zap.NewStdLog(logger.With(zap.String("component", "zipkin_exporter")))),
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("zipkin exporter setup failed: %w", err)
+		}
+
+		tp, err := sdktrace.NewProvider(
+			sdktrace.WithBatcher(zexp),
+			sdktrace.WithResourceAttributes(key.String("exporter", "zipkin")),
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("zipkin trace provider setup failed: %w", err)
+		}
+
+		return tp.Tracer(""), func() {}, nil
+	default:
+		return nil, nil, fmt.Errorf("unknown tracer type %s", cfg.Trace.TracerType)
 	}
 }
