@@ -30,6 +30,8 @@ This hook called each time when user tries to download module through Athens. Th
 * Multiple sources of license detection:
     * Github for modules hosted on it. Has fallback to [go-license-detector](godoc.org/gopkg.in/src-d/go-license-detector.v3)
     * Detection using module zip from proxy.golang.org with [go-license-detector](godoc.org/gopkg.in/src-d/go-license-detector.v3) without downloading whole zip
+* In-memory (plain or LRU) and Redis-based caching
+* Opentelemetry support (Zipkin, Jaeger exporters onboard) and metrics (prometheus handler at `/metrics`)
 
 ## Running
 * Direct install:
