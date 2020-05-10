@@ -18,6 +18,13 @@ const (
 	CacheTypeRedis  CacheType = "redis"
 )
 
+type TracerType string
+
+const (
+	ZipkinTracer TracerType = "zipkin"
+	JaegerTracer TracerType = "jaeger"
+)
+
 // Config is a top-level app config
 type Config struct {
 	// Debug is a flag to enable debug logging
@@ -37,6 +44,10 @@ type Config struct {
 	Validation Validation
 
 	Server Server
+
+	// Trace is optional tracing/telemetry configuration.
+	// Tracing will not be enabled if option not provided.
+	Trace *Trace
 }
 
 // Cache represents cache configuration
@@ -161,4 +172,20 @@ type Server struct {
 	ListenAddr string
 	// EnablePprof adds pprof handlers to server at /pprof
 	EnablePprof bool
+}
+
+// Trace represents opentelemetry configuration
+type Trace struct {
+	// CollectorAddress is a traces collector address
+	CollectorAddress string
+
+	// TracerType is a trace collector type. Available types:
+	// * zipkin
+	// * jaeger
+	TracerType TracerType
+
+	// SampleProbability samples a given fraction of traces. Fractions >= 1 or <= 0 will
+	// always sample. If the parent span is sampled, then it's child spans will
+	// automatically be sampled
+	SampleProbability float64
 }

@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/plugin/othttp"
 	"go.uber.org/zap"
 )
 
@@ -48,11 +50,13 @@ func (w *WriterInterceptor) Code() int {
 	return w.code
 }
 
-func Middleware(log *zap.Logger) func(next http.Handler) http.Handler {
+func Middleware(log *zap.Logger, meter metric.Meter) func(next http.Handler) http.Handler {
+	dur, _ := meter.NewFloat64Measure("http_handler_duration", metric.WithDescription("HTTP Handler work time"))
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
-			r.RemoteAddr = ReadUserIP(r)
+			_, port, _ := net.SplitHostPort(r.RemoteAddr)
+			r.RemoteAddr = net.JoinHostPort(ReadUserIP(r), port)
 			readCounter := ReadCounter{ReadCloser: r.Body}
 			writerInterceptor := WriterInterceptor{ResponseWriter: w}
 
@@ -61,6 +65,12 @@ func Middleware(log *zap.Logger) func(next http.Handler) http.Handler {
 			next.ServeHTTP(&writerInterceptor, r)
 
 			latency := time.Since(start)
+
+			dur.Record(r.Context(), latency.Seconds(),
+				othttp.PathKey.String(r.URL.Path),
+				othttp.MethodKey.String(r.Method),
+				othttp.StatusCodeKey.Int(writerInterceptor.Code()),
+			)
 
 			log.Info("HTTP Request",
 				zap.String("method", r.Method),
