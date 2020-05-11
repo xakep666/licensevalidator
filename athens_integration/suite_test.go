@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/xakep666/licensevalidator/internal/testutil"
 )
 
 var (
@@ -98,7 +100,7 @@ func (s *AthensIntegrationTestSuite) SetupSuite() {
 		ProviderType: testcontainers.ProviderDocker,
 	})
 	s.Require().NoError(err)
-	s.appContainer.FollowOutput(&TLogConsumer{
+	s.appContainer.FollowOutput(&testutil.TLogConsumer{
 		T:      s.T(),
 		Prefix: "LicenseValidator",
 	})
@@ -131,7 +133,7 @@ func (s *AthensIntegrationTestSuite) SetupSuite() {
 	})
 	s.Require().NoError(err, "athens startup failed")
 
-	s.athensContainer.FollowOutput(&TLogConsumer{
+	s.athensContainer.FollowOutput(&testutil.TLogConsumer{
 		T:      s.T(),
 		Prefix: "Athens",
 	})
@@ -150,15 +152,6 @@ func (s *AthensIntegrationTestSuite) TearDownSuite() {
 	s.NoError(s.appContainer.Terminate(appStopCtx))
 
 	s.NoError(s.network.Remove(context.Background()))
-}
-
-type TLogConsumer struct {
-	*testing.T
-	Prefix string
-}
-
-func (c *TLogConsumer) Accept(log testcontainers.Log) {
-	c.Logf("%s [%s]: %s", c.Prefix, log.LogType, log.Content)
 }
 
 func TestAthensIntegration_suite(t *testing.T) {

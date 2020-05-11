@@ -11,6 +11,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/xakep666/licensevalidator/internal/testutil"
 	"github.com/xakep666/licensevalidator/pkg/cache"
 	"github.com/xakep666/licensevalidator/pkg/validation"
 )
@@ -62,9 +63,7 @@ func (s *RedisCacheTestSuite) SetupSuite() {
 	})
 	s.Require().NoError(err)
 
-	s.redisContainer.FollowOutput(LogConsumerFunc(func(log testcontainers.Log) {
-		s.T().Logf("redis [%s]: %s", log.LogType, log.Content)
-	}))
+	s.redisContainer.FollowOutput(&testutil.TLogConsumer{T: s.T(), Prefix: "redis"})
 	s.Require().NoError(s.redisContainer.StartLogProducer(context.Background()))
 
 	redisEp, err := s.redisContainer.PortEndpoint(context.Background(), "6379/tcp", "")
@@ -102,7 +101,3 @@ func TestRedisCache_Suite(t *testing.T) {
 
 	suite.Run(t, new(RedisCacheTestSuite))
 }
-
-type LogConsumerFunc func(log testcontainers.Log)
-
-func (f LogConsumerFunc) Accept(log testcontainers.Log) { f(log) }
