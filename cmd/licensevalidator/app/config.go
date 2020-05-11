@@ -25,6 +25,12 @@ const (
 	JaegerTracer TracerType = "jaeger"
 )
 
+type NotificationType string
+
+const (
+	NotificationTypeWebhook NotificationType = "webhook"
+)
+
 // Config is a top-level app config
 type Config struct {
 	// Debug is a flag to enable debug logging
@@ -81,7 +87,7 @@ type Redis struct {
 	DB int
 
 	// Password is an optional password
-	Password string
+	Password MaskedString
 
 	// ConnectTimeout is an optional connect timeout
 	ConnectTimeout time.Duration
@@ -140,7 +146,7 @@ type Validation struct {
 	// UnknownLicenseAction specifies what to do if unknown license met.
 	// Currently available:
 	// * allow - simply allow such module
-	// * TODO: warn - allows such module but notifies
+	// * warn - allows such module but notifies
 	// * deny - fails module validation
 	UnknownLicenseAction UnknownLicenseAction
 
@@ -148,6 +154,24 @@ type Validation struct {
 	ConfidenceThreshold float64
 
 	RuleSet RuleSet
+
+	// NotificationType is an unknown license notification type
+	NotificationType NotificationType
+
+	Webhook *WebhookNotification
+}
+
+type WebhookNotification struct {
+	// Address is a target webhook addres (full url)
+	Address MaskedURL
+	// Method is optional http method for webhook request. Default is POST.
+	Method string
+	// Headers contains additional http headers for webhook request.
+	Headers map[string]string
+	// BodyTemplate is optional request body template string in 'text/template' syntax.
+	// Execution context defined in 'pkg/validation.WebhookTemplateContext'.
+	// Also helper function 'toJSON' is available that converts input argument to json string.
+	BodyTemplate string
 }
 
 // RuleSet defines a validation rule set

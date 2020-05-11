@@ -48,7 +48,7 @@ func (v *NotifyingValidator) onUnknownLicense(ctx context.Context, m Module) err
 		l.Debug("Allowing unknown license")
 		return nil
 	case UnknownLicenseWarn:
-		l.Warn("Notifying about unknown license")
+		l.Info("Notifying about unknown license")
 		if err := v.UnknownLicenseNotifier.NotifyUnknownLicense(ctx, m); err != nil {
 			l.Error("Notifying about unknown license failed", zap.Error(err))
 		}
