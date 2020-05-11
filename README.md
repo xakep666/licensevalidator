@@ -33,6 +33,14 @@ This hook called each time when user tries to download module through Athens. Th
 * In-memory (plain or LRU) and Redis-based caching
 * Opentelemetry support (Zipkin, Jaeger exporters onboard) and metrics (prometheus handler at `/metrics`)
 * Notifying about unknown license. Currently it's a configurable http request.
+* Ability to switch log level "on the fly". Just supply level at `PUT /loglevel` in form `{"level": "<level>"}`. Supported levels:
+    * `debug` - logs are typically voluminous, and are usually disabled in production.
+    * `info` - is the default logging priority.
+    * `warn` - logs are more important than `info`, but don't need individual human review.
+    * `error` - logs are high-priority.
+    * `dpanic` - logs are particularly important errors. In development (selected by `Debug` parameter in config) the logger panics after writing the message.
+    * `panic` - logs a message, then panics.
+    * `fatal` - logs a message, then exits with code 1.
 
 ## Running
 * Direct install:

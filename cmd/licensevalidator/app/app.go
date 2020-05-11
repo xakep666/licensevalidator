@@ -51,11 +51,9 @@ type App struct {
 }
 
 func NewApp(cfg Config) (*App, error) {
-	var logger *zap.Logger
-	if cfg.Debug {
-		logger, _ = zap.NewDevelopment()
-	} else {
-		logger, _ = zap.NewProduction()
+	logger, loglevel, err := setupLogger(&cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to setup logger: %w", err)
 	}
 
 	logger.Info("Running with config", zap.Reflect("config", cfg))
@@ -120,6 +118,7 @@ func NewApp(cfg Config) (*App, error) {
 			othttp.WithTracer(tracer),
 		),
 	)
+	mux.Handle("/loglevel", observMiddleware(loglevel))
 	mux.HandleFunc("/metrics", metricHandler)
 	addPprofHandlers(&cfg, mux)
 
@@ -151,6 +150,22 @@ func (a *App) Stop(ctx context.Context) error {
 	a.logger.Info("Stopping")
 	defer a.tracerFlush()
 	return a.server.Shutdown(ctx)
+}
+
+func setupLogger(cfg *Config) (*zap.Logger, *zap.AtomicLevel, error) {
+	var logcfg zap.Config
+	if cfg.Debug {
+		logcfg = zap.NewDevelopmentConfig()
+	} else {
+		logcfg = zap.NewProductionConfig()
+	}
+
+	logger, err := logcfg.Build()
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w", err)
+	}
+
+	return logger, &logcfg.Level, nil
 }
 
 func setupRedis(cfg *Config) (radix.Client, error) {
