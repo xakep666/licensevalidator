@@ -1,3 +1,6 @@
+// Package validation contains logic to perform project validation against provided rules
+// This package contains only interfaces for module translation (to deal with vanity servers) and license resolution
+// and it should not include such logic.
 package validation
 
 import (

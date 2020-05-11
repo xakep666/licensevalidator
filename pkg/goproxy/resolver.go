@@ -76,10 +76,10 @@ func (c *Client) ResolveLicense(ctx context.Context, m validation.Module) (valid
 	case errors.Is(err, nil):
 		// pass
 	case errors.As(err, &codeErr):
-		l.Error("unexpected status code", zap.Error(err))
 		if codeErr.Code == http.StatusNotFound || codeErr.Code == http.StatusGone {
 			return validation.License{}, validation.ErrUnknownLicense
 		}
+		l.Error("unexpected status code", zap.Error(err))
 		fallthrough
 	default:
 		return validation.License{}, fmt.Errorf("module zip request failed: %w", err)

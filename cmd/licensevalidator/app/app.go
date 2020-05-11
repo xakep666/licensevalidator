@@ -2,14 +2,17 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"log"
 	"net"
 	"net/http"
 	"net/http/pprof"
 	"net/url"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -89,7 +92,7 @@ func NewApp(cfg Config) (*App, error) {
 		return nil, fmt.Errorf("setup cache failed: %w", err)
 	}
 
-	validator, err := validator(logger, &cfg, translator, c)
+	validator, err := validator(logger, &cfg, translator, c, tracer, meter)
 	if err != nil {
 		return nil, fmt.Errorf("validator init failed: %w", err)
 	}
@@ -161,7 +164,7 @@ func setupRedis(cfg *Config) (radix.Client, error) {
 		dialOpts = append(dialOpts, radix.DialSelectDB(cfg.Cache.Redis.DB))
 	}
 	if cfg.Cache.Redis.Password != "" {
-		dialOpts = append(dialOpts, radix.DialAuthPass(cfg.Cache.Redis.Password))
+		dialOpts = append(dialOpts, radix.DialAuthPass(string(cfg.Cache.Redis.Password)))
 	}
 	if cfg.Cache.Redis.ConnectTimeout > 0 {
 		dialOpts = append(dialOpts, radix.DialConnectTimeout(cfg.Cache.Redis.ConnectTimeout))
@@ -302,16 +305,29 @@ func translator(log *zap.Logger, cfg *Config) (*validation.ChainedTranslator, er
 	}, nil
 }
 
-func validator(log *zap.Logger, cfg *Config, translator validation.Translator, resolver validation.LicenseResolver) (*validation.NotifyingValidator, error) {
-	var unknownLicenseAction validation.UnknownLicenseAction
+func validator(
+	log *zap.Logger,
+	cfg *Config,
+	translator validation.Translator,
+	resolver validation.LicenseResolver,
+	tracer trace.Tracer,
+	meter metric.Meter,
+) (*validation.NotifyingValidator, error) {
+	var (
+		unknownLicenseAction   validation.UnknownLicenseAction
+		unknownLicenseNotifier validation.UnknownLicenseNotifier
+	)
 
 	switch cfg.Validation.UnknownLicenseAction {
 	case UnknownLicenseAllow:
 		unknownLicenseAction = validation.UnknownLicenseAllow
 	case UnknownLicenseWarn:
-		// TODO
-		// unknownLicenseAction = validation.UnknownLicenseWarn
-		return nil, fmt.Errorf("warning about unknown license currently not supported")
+		var err error
+		unknownLicenseAction = validation.UnknownLicenseWarn
+		unknownLicenseNotifier, err = setupUnknownLicenseNotifier(log, cfg, tracer, meter)
+		if err != nil {
+			return nil, fmt.Errorf("setup unknown license notifier failed: %w", err)
+		}
 	case UnknownLicenseDeny:
 		unknownLicenseAction = validation.UnknownLicenseDeny
 	default:
@@ -350,7 +366,8 @@ func validator(log *zap.Logger, cfg *Config, translator validation.Translator, r
 				LicenseResolver: resolver,
 				RuleSet:         ruleSet,
 			}),
-			UnknownLicenseAction: unknownLicenseAction,
+			UnknownLicenseAction:   unknownLicenseAction,
+			UnknownLicenseNotifier: unknownLicenseNotifier,
 		}), nil
 }
 
@@ -516,4 +533,47 @@ func setupPrometheus(logger *zap.Logger) (*push.Controller, http.HandlerFunc, er
 	},
 		10*time.Second,
 	)
+}
+
+func setupUnknownLicenseNotifier(log *zap.Logger, cfg *Config, tracer trace.Tracer, meter metric.Meter) (validation.UnknownLicenseNotifier, error) {
+	switch cfg.Validation.NotificationType {
+	case NotificationTypeWebhook:
+		n, err := setupWebhookNotifier(log, cfg, tracer, meter)
+		if err != nil {
+			return nil, fmt.Errorf("webhook notifier setup failed: %w", err)
+		}
+
+		return n, nil
+	default:
+		return nil, fmt.Errorf("unknown notification type: %s", cfg.Validation.NotificationType)
+	}
+}
+
+func setupWebhookNotifier(log *zap.Logger, cfg *Config, tracer trace.Tracer, meter metric.Meter) (*validation.WebhookNotifier, error) {
+	tpl, err := template.
+		New("").
+		Funcs(template.FuncMap{
+			"toJSON": func(in interface{}) (string, error) {
+				b, err := json.Marshal(in)
+				return string(b), err
+			},
+		}).
+		Parse(cfg.Validation.Webhook.BodyTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("body template parse failed: %w", err)
+	}
+
+	return validation.NewWebhookNotifier(log, validation.WebhookNotifierParams{
+		Client: &http.Client{
+			Transport: &observ.TraceTransport{
+				ServiceName: "unknown_license_webhook",
+				Tracer:      tracer,
+				Meter:       meter,
+			},
+		},
+		Address:      string(cfg.Validation.Webhook.Address),
+		Method:       strings.ToUpper(cfg.Validation.Webhook.Method),
+		Headers:      cfg.Validation.Webhook.Headers,
+		BodyTemplate: tpl,
+	}), nil
 }
