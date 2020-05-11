@@ -28,8 +28,8 @@ This hook called each time when user tries to download module through Athens. Th
     * Deny such modules
 * Dealing with vanity servers (servers needed for decoupling module name from repository like `gopkg.in`). Project supports `gopkg.in`, `golang.org/x` and `go.googlesource.com` out of the box. Other rewrite rules can be added through config
 * Multiple sources of license detection:
-    * Github for modules hosted on it. Has fallback to [go-license-detector](godoc.org/gopkg.in/src-d/go-license-detector.v3)
-    * Detection using module zip from proxy.golang.org with [go-license-detector](godoc.org/gopkg.in/src-d/go-license-detector.v3) without downloading whole zip
+    * Github for modules hosted on it. Has fallback to [go-license-detector](https://godoc.org/gopkg.in/src-d/go-license-detector.v3)
+    * Detection using module zip from proxy.golang.org with [go-license-detector](https://godoc.org/gopkg.in/src-d/go-license-detector.v3) without downloading whole zip
 * In-memory (plain or LRU) and Redis-based caching
 * Opentelemetry support (Zipkin, Jaeger exporters onboard) and metrics (prometheus handler at `/metrics`)
 * Notifying about unknown license. Currently it's a configurable http request.
@@ -127,7 +127,7 @@ Debug = true
 Athens proxy should be configured properly by setting `ATHENS_PROXY_VALIDATOR` environment variable or `ValidatorHook` parameter in config to `<base-url of app>/athens/admission`
 
 ## Caveats
-* Regexp-based [go-license-detector](godoc.org/gopkg.in/src-d/go-license-detector.v3) is slow, very slow. Simple license detection (only single file with license text) takes approx 2s on MacBook Pro (15-inch, 2017)
+* Regexp-based [go-license-detector](https://godoc.org/gopkg.in/src-d/go-license-detector.v3) is slow, very slow. Simple license detection (only single file with license text) takes approx 2s on MacBook Pro (15-inch, 2017)
 
 ## Running tests
 This project contains integration tests that uses [testcontainers-go](https://github.com/testcontainers/testcontainers-go).
