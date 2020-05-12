@@ -26,13 +26,13 @@ This hook called each time when user tries to download module through Athens. Th
 * Configurable behaviour for modules with non-determined license:
     * Allow such modules
     * Deny such modules
+    * Notifying about such modules. Currently it's a configurable http request.
 * Dealing with vanity servers (servers needed for decoupling module name from repository like `gopkg.in`). Project supports `gopkg.in`, `golang.org/x` and `go.googlesource.com` out of the box. Other rewrite rules can be added through config
 * Multiple sources of license detection:
     * Github for modules hosted on it. Has fallback to [go-license-detector](https://godoc.org/gopkg.in/src-d/go-license-detector.v3)
     * Detection using module zip from proxy.golang.org with [go-license-detector](https://godoc.org/gopkg.in/src-d/go-license-detector.v3) without downloading whole zip
 * In-memory (plain or LRU) and Redis-based caching
 * Opentelemetry support (Zipkin, Jaeger exporters onboard) and metrics (prometheus handler at `/metrics`)
-* Notifying about unknown license. Currently it's a configurable http request.
 * Ability to switch log level "on the fly". Just supply level at `PUT /loglevel` in form `{"level": "<level>"}`. Supported levels:
     * `debug` - logs are typically voluminous, and are usually disabled in production.
     * `info` - is the default logging priority.
