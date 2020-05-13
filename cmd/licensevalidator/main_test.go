@@ -94,7 +94,7 @@ func TestAppRunsWithSample(t *testing.T) {
 
 			t.Logf("Probe response code is %d", resp.StatusCode)
 			return resp.StatusCode < http.StatusInternalServerError
-		}, 20*time.Second, 2*time.Second, "server didn't become ready")
+		}, 5*time.Minute, 10*time.Second, "server didn't become ready")
 
 		// send sigterm to stop app
 		interruptChan <- syscall.SIGTERM
