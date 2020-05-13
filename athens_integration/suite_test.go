@@ -155,6 +155,7 @@ func (s *AthensIntegrationTestSuite) TearDownSuite() {
 }
 
 func TestAthensIntegration_suite(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("Skipping integration tests in short mode")
 		return

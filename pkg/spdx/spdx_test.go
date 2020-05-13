@@ -9,6 +9,7 @@ import (
 )
 
 func TestLicenseByID(t *testing.T) {
+	t.Parallel()
 	t.Run("find MIT", func(t *testing.T) {
 		licInfo, ok := spdx.LicenseByID("MIT")
 		if assert.True(t, ok, "MIT present in SPDX but not found") {

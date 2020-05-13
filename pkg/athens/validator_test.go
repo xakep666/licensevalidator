@@ -95,5 +95,6 @@ func (s *InternalValidatorTestSuite) TearDownTest() {
 }
 
 func TestInternalValidator_Suite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(InternalValidatorTestSuite))
 }

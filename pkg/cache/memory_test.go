@@ -15,6 +15,7 @@ import (
 )
 
 func TestMemoryCache_ResolveLicense(t *testing.T) {
+	t.Parallel()
 	var licenseResolverMock validation.LicenseResolverMock
 	defer licenseResolverMock.AssertExpectations(t)
 
@@ -47,6 +48,7 @@ func TestMemoryCache_ResolveLicense(t *testing.T) {
 }
 
 func TestMemoryCache_ResolveLicense_error_not_cached(t *testing.T) {
+	t.Parallel()
 	var licenseResolverMock validation.LicenseResolverMock
 	defer licenseResolverMock.AssertExpectations(t)
 

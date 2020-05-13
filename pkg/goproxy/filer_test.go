@@ -24,6 +24,7 @@ func openTestZip(t *testing.T) *zip.Reader {
 }
 
 func TestZipFiler_ReadFile(t *testing.T) {
+	t.Parallel()
 	filer := &goproxy.ZipFiler{
 		Reader: openTestZip(t),
 		Module: validation.Module{
@@ -69,6 +70,7 @@ go 1.13
 }
 
 func TestZipFiler_ReadDir(t *testing.T) {
+	t.Parallel()
 	filer := &goproxy.ZipFiler{
 		Reader: openTestZip(t),
 		Module: validation.Module{

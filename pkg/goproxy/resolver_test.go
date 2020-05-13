@@ -18,6 +18,7 @@ import (
 )
 
 func TestClient_ResolveLicense(t *testing.T) {
+	t.Parallel()
 	mockedServerMux := http.NewServeMux()
 	mockedServerMux.HandleFunc("/github.com/stretchr/testify/@v/v1.5.1.zip", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, path.Join("testdata", "testify-1.5.1.zip"))

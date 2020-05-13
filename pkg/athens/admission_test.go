@@ -15,6 +15,7 @@ import (
 )
 
 func TestAdmissionHandler(t *testing.T) {
+	t.Parallel()
 	type testCase struct {
 		Name               string
 		Request            *http.Request
@@ -128,6 +129,7 @@ func TestAdmissionHandler(t *testing.T) {
 }
 
 func TestAdmissionHandler_prevents_misconfiguration(t *testing.T) {
+	t.Parallel()
 	var validatorMock athens.ValidatorMock
 	defer validatorMock.AssertExpectations(t)
 

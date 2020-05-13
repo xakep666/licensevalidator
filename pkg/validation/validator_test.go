@@ -120,5 +120,6 @@ func (s *ValidatorTestSuite) TearDownSuite() {
 }
 
 func TestValidator_Suite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(ValidatorTestSuite))
 }

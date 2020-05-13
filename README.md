@@ -126,9 +126,6 @@ Debug = true
 
 Athens proxy should be configured properly by setting `ATHENS_PROXY_VALIDATOR` environment variable or `ValidatorHook` parameter in config to `<base-url of app>/athens/admission`
 
-## Caveats
-* Regexp-based [go-license-detector](https://godoc.org/gopkg.in/src-d/go-license-detector.v3) is slow, very slow. Simple license detection (only single file with license text) takes approx 2s on MacBook Pro (15-inch, 2017)
-
 ## Running tests
 This project contains integration tests that uses [testcontainers-go](https://github.com/testcontainers/testcontainers-go).
 They can be skipped using `-short` flag. Correct running requires working Docker.

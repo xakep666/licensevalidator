@@ -21,6 +21,7 @@ import (
 )
 
 func TestTraceTransport_RoundTrip(t *testing.T) {
+	t.Parallel()
 	var spanBuffer bytes.Buffer
 
 	exp, err := stdout.NewExporter(stdout.Options{

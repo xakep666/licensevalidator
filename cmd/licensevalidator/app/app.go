@@ -32,6 +32,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 
+	"github.com/xakep666/licensevalidator/internal/preload"
 	"github.com/xakep666/licensevalidator/pkg/athens"
 	"github.com/xakep666/licensevalidator/pkg/cache"
 	"github.com/xakep666/licensevalidator/pkg/github"
@@ -57,6 +58,9 @@ func NewApp(cfg Config) (*App, error) {
 	}
 
 	logger.Info("Running with config", zap.Reflect("config", cfg))
+
+	logger.Info("Loading license database")
+	preload.LicenseDB()
 
 	tracer, tracerFlush, err := setupTracer(&cfg, logger)
 	if err != nil {

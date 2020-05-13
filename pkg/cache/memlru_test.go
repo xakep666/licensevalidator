@@ -16,6 +16,7 @@ import (
 )
 
 func TestMemLRU_ResolveLicense(t *testing.T) {
+	t.Parallel()
 	var licenseResolverMock validation.LicenseResolverMock
 	defer licenseResolverMock.AssertExpectations(t)
 
@@ -49,6 +50,7 @@ func TestMemLRU_ResolveLicense(t *testing.T) {
 }
 
 func TestMemLRU_ResolveLicense_error_not_cached(t *testing.T) {
+	t.Parallel()
 	var licenseResolverMock validation.LicenseResolverMock
 	defer licenseResolverMock.AssertExpectations(t)
 
@@ -82,6 +84,7 @@ func TestMemLRU_ResolveLicense_error_not_cached(t *testing.T) {
 }
 
 func TestNewMemLRU_ResolveLicense_eviction(t *testing.T) {
+	t.Parallel()
 	var licenseResolverMock validation.LicenseResolverMock
 	defer licenseResolverMock.AssertExpectations(t)
 
