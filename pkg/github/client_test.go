@@ -74,6 +74,7 @@ const (
 )
 
 func TestClient_ResolveLicense(t *testing.T) {
+	t.Parallel()
 	mockedServerMux := http.NewServeMux()
 	mockedServerMux.HandleFunc("/repos/test/mit/license", func(w http.ResponseWriter, r *http.Request) {
 		serveJSON(w, http.StatusOK, json.RawMessage(mitJSON))

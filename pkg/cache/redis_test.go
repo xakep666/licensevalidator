@@ -94,6 +94,7 @@ func (s *RedisCacheTestSuite) TearDownSuite() {
 }
 
 func TestRedisCache_Suite(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skipf("Skipping integration test in short mode")
 		return

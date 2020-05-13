@@ -14,6 +14,7 @@ import (
 )
 
 func TestTranslator_Translate(t *testing.T) {
+	t.Parallel()
 	type testCase struct {
 		Overrides []override.TranslateOverride
 		Input     string

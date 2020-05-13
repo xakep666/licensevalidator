@@ -14,6 +14,7 @@ import (
 )
 
 func TestChainedTranslator_Translate(t *testing.T) {
+	t.Parallel()
 	var (
 		tr1, tr2, tr3 validation.TranslatorMock
 	)
@@ -60,6 +61,7 @@ func TestChainedTranslator_Translate(t *testing.T) {
 }
 
 func TestChainedTranslator_Translate_error(t *testing.T) {
+	t.Parallel()
 	var (
 		tr1, tr2 validation.TranslatorMock
 	)
@@ -82,6 +84,7 @@ func TestChainedTranslator_Translate_error(t *testing.T) {
 }
 
 func TestChainedLicenseResolver_ResolveLicense(t *testing.T) {
+	t.Parallel()
 	var (
 		r1, r2 validation.LicenseResolverMock
 	)
@@ -109,6 +112,7 @@ func TestChainedLicenseResolver_ResolveLicense(t *testing.T) {
 }
 
 func TestChainedLicenseResolver_ResolveLicense_error(t *testing.T) {
+	t.Parallel()
 	var (
 		r1, r2 validation.LicenseResolverMock
 	)

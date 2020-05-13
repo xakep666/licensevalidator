@@ -20,6 +20,7 @@ func MustParseConstraint(constraint string) *semver.Constraints {
 }
 
 func TestRuleSet_Validate(t *testing.T) {
+	t.Parallel()
 	type testCase struct {
 		Name          string
 		Module        validation.LicensedModule
@@ -135,6 +136,7 @@ func TestRuleSet_Validate(t *testing.T) {
 }
 
 func TestModuleMatcher_Match(t *testing.T) {
+	t.Parallel()
 	type testCase struct {
 		Name          string
 		Module        validation.Module

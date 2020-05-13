@@ -111,5 +111,6 @@ func (s *NotifyingValidatorTestSuite) TearDownTest() {
 }
 
 func TestNotifyingValidator_Suite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(NotifyingValidatorTestSuite))
 }

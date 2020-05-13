@@ -18,6 +18,7 @@ import (
 )
 
 func TestAppRunsWithSample(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skipf("Skip integration test in short mode")
 		return

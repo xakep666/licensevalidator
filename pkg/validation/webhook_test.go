@@ -17,6 +17,7 @@ import (
 )
 
 func TestLicenseResolverMock_ResolveLicense(t *testing.T) {
+	t.Parallel()
 	mux := http.NewServeMux()
 	server := httptest.NewServer(mux)
 
