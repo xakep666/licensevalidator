@@ -24,7 +24,7 @@ func TestAppRunsWithSample(t *testing.T) {
 		return
 	}
 
-	la := ConfigSample.Server.ListenAddr
+	la := ConfigSample.HealthServer.ListenAddr
 
 	// firstly ensure that addr from config sample can be listened
 	listener, err := net.Listen("tcp", la)
@@ -86,14 +86,15 @@ func TestAppRunsWithSample(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Eventually(t, func() bool {
-			resp, err := http.Get(fmt.Sprintf("http://localhost:%s", port))
+			resp, err := http.Get(fmt.Sprintf("http://localhost:%s/ready", port))
 			if err != nil {
 				t.Logf("Probe error: %s", err)
 				return false
 			}
 			defer resp.Body.Close()
 
-			t.Logf("Probe response code is %d", resp.StatusCode)
+			body, _ := ioutil.ReadAll(resp.Body)
+			t.Logf("Probe response code is %d: %s", resp.StatusCode, body)
 			return resp.StatusCode < http.StatusInternalServerError
 		}, 5*time.Minute, 10*time.Second, "server didn't become ready")
 

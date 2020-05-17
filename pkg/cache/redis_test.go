@@ -50,6 +50,10 @@ func (s *RedisCacheTestSuite) TestResolveLicense() {
 	}
 }
 
+func (s *RedisCacheTestSuite) TestHealth() {
+	s.NoError(s.cache.Check(context.Background()))
+}
+
 func (s *RedisCacheTestSuite) SetupSuite() {
 	var err error
 	s.redisContainer, err = testcontainers.GenericContainer(context.Background(), testcontainers.GenericContainerRequest{

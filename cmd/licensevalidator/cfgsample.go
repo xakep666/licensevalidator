@@ -15,9 +15,6 @@ var ConfigSample = app.Config{
 	Cache: &app.Cache{
 		Type: app.CacheTypeMemory,
 	},
-	Github: app.Github{
-		AccessToken: "test-github-token",
-	},
 	GoProxy: app.GoProxy{
 		BaseURL: "https://proxy.golang.org",
 	},
@@ -49,6 +46,9 @@ var ConfigSample = app.Config{
 	Server: app.Server{
 		ListenAddr:  ":8080",
 		EnablePprof: true,
+	},
+	HealthServer: &app.Server{
+		ListenAddr: ":8081",
 	},
 }
 

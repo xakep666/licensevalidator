@@ -45,13 +45,19 @@ type ClientParams struct {
 type Client struct {
 	ClientParams
 
-	log *zap.Logger
+	log    *zap.Logger
+	client *http.Client
 }
 
 func NewClient(logger *zap.Logger, params ClientParams) *Client {
+	hc := http.DefaultClient
+	if params.HTTPClient != nil {
+		hc = params.HTTPClient
+	}
 	return &Client{
 		ClientParams: params,
 		log:          logger.With(zap.String("component", "goproxy_client")),
+		client:       hc,
 	}
 }
 
@@ -71,7 +77,7 @@ func (c *Client) ResolveLicense(ctx context.Context, m validation.Module) (valid
 	defer store.Close()
 
 	var codeErr *httpreaderat.ErrUnexpectedResponseCode
-	rd, err := httpreaderat.New(c.HTTPClient, req, store)
+	rd, err := httpreaderat.New(c.client, req, store)
 	switch {
 	case errors.Is(err, nil):
 		// pass
@@ -153,4 +159,24 @@ func (c *Client) licenseToReturn(m validation.Module, matches map[string]api.Mat
 		Name:   licInfo.Name,
 		SPDXID: mostConfidentLicence,
 	}, nil
+}
+
+func (c *Client) Check(ctx context.Context) error {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/github.com/golang/go/@v/list", c.BaseURL), nil)
+	if err != nil {
+		return fmt.Errorf("http request construct failed: %w", err)
+	}
+
+	resp, err := c.client.Do(req.WithContext(ctx))
+	if err != nil {
+		return fmt.Errorf("make http request failed: %w", err)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= http.StatusInternalServerError {
+		return fmt.Errorf("server returned non-ok status: %d", resp.StatusCode)
+	}
+
+	return nil
 }
