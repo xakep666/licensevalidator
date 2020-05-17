@@ -91,6 +91,13 @@ Debug = true
   ListenAddr = ":8080"
   EnablePprof = true # adds pprof handlers at /pprof
 
+# Health check server
+# Contains two endpoints:
+# * GET /live - for liveness probes
+# * Get /ready - for readiness probes
+[HealthServer]
+  ListenAddr = ":8081"
+
 [Validation]
   # Some ways of license detection doesn't produce 100% accurate result.
   # This parameter holds lower-bound threshold of license matching confidence.

@@ -121,3 +121,16 @@ func (c *Client) detectFallback(m validation.Module, rl *github.RepositoryLicens
 		SPDXID: mostConfidentLicense,
 	}, nil
 }
+
+func (c *Client) Check(ctx context.Context) error {
+	var rle *github.RateLimitError
+	_, _, err := c.Client.RateLimits(ctx)
+	switch {
+	case errors.Is(err, nil):
+		return nil
+	case errors.As(err, &rle):
+		return nil
+	default:
+		return fmt.Errorf("%w", err)
+	}
+}

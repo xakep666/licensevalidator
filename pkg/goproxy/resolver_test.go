@@ -32,6 +32,9 @@ func TestClient_ResolveLicense(t *testing.T) {
 	mockedServerMux.HandleFunc("/gone/@v/v1.0.0.zip", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not found: /gone/@v/v1.0.0.zip: invalid version: unknown revision v1.0.0", http.StatusGone)
 	})
+	mockedServerMux.HandleFunc("/github.com/golang/go/@v/list", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
 	server := httptest.NewServer(mockedServerMux)
 
@@ -98,5 +101,16 @@ func TestClient_ResolveLicense(t *testing.T) {
 			Version: semver.MustParse("v1.0.0"),
 		})
 		assert.Equal(t, validation.ErrUnknownLicense, err)
+	})
+
+	t.Run("health check", func(t *testing.T) {
+		client := goproxy.NewClient(zaptest.NewLogger(t), goproxy.ClientParams{
+			HTTPClient:          server.Client(),
+			BaseURL:             server.URL,
+			ConfidenceThreshold: 0.99,
+		})
+
+		err := client.Check(context.Background())
+		assert.NoError(t, err)
 	})
 }

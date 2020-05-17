@@ -51,6 +51,11 @@ type Config struct {
 
 	Server Server
 
+	// HealthServer is a server for liveness and readiness probe handlers.
+	// These handlers not added to main server because on graceful shutdown it puts app into false unhealthy status.
+	// Server will not be started if section not provided.
+	HealthServer *Server
+
 	// Trace is optional tracing/telemetry configuration.
 	// Tracing will not be enabled if option not provided.
 	Trace *Trace

@@ -39,6 +39,7 @@ import (
 	"github.com/xakep666/licensevalidator/pkg/golang"
 	"github.com/xakep666/licensevalidator/pkg/gopkg"
 	"github.com/xakep666/licensevalidator/pkg/goproxy"
+	"github.com/xakep666/licensevalidator/pkg/health"
 	"github.com/xakep666/licensevalidator/pkg/observ"
 	"github.com/xakep666/licensevalidator/pkg/override"
 	"github.com/xakep666/licensevalidator/pkg/spdx"
@@ -46,9 +47,11 @@ import (
 )
 
 type App struct {
-	logger      *zap.Logger
-	server      *http.Server
-	tracerFlush func()
+	logger        *zap.Logger
+	server        *http.Server
+	healthServer  *http.Server // non-nil if enabled in config
+	healthChecker *health.Health
+	tracerFlush   func()
 }
 
 func NewApp(cfg Config) (*App, error) {
@@ -58,6 +61,8 @@ func NewApp(cfg Config) (*App, error) {
 	}
 
 	logger.Info("Running with config", zap.Reflect("config", cfg))
+
+	hc := health.NewHealth()
 
 	logger.Info("Loading license database")
 	preload.LicenseDB()
@@ -83,13 +88,13 @@ func NewApp(cfg Config) (*App, error) {
 		LicenseResolver: &observ.LicenseResolver{
 			LicenseResolver: &validation.ChainedLicenseResolver{
 				LicenseResolvers: []validation.LicenseResolver{
-					githubClient(logger, &cfg, tracer, meter),
-					goproxyClient(logger, &cfg, tracer, meter),
+					githubClient(logger, &cfg, tracer, meter, hc),
+					goproxyClient(logger, &cfg, tracer, meter, hc),
 				},
 			},
 			Meter: meter,
 		},
-	})
+	}, hc)
 	if err != nil {
 		return nil, fmt.Errorf("setup cache failed: %w", err)
 	}
@@ -132,15 +137,26 @@ func NewApp(cfg Config) (*App, error) {
 			Addr:    cfg.Server.ListenAddr,
 			Handler: mux,
 			ErrorLog: func() *log.Logger {
-				l, _ := zap.NewStdLogAt(logger, zap.ErrorLevel)
+				l, _ := zap.NewStdLogAt(logger.With(zap.String("component", "http_server")), zap.ErrorLevel)
 				return l
 			}(),
 		},
-		tracerFlush: tracerFlush,
+		healthServer: setupHealthServer(&cfg, logger, hc),
+		tracerFlush:  tracerFlush,
 	}, nil
 }
 
 func (a *App) Run() error {
+	if a.healthServer != nil {
+		go func() {
+			a.logger.Info("Serving HTTP health check requests", zap.String("listen_addr", a.healthServer.Addr))
+			err := a.healthServer.ListenAndServe()
+			if !errors.Is(err, http.ErrServerClosed) {
+				a.logger.Error("Failed to run HTTP health check server", zap.Error(err))
+			}
+		}()
+	}
+
 	a.logger.Info("Serving HTTP Requests", zap.String("listen_addr", a.server.Addr))
 	err := a.server.ListenAndServe()
 	if errors.Is(err, http.ErrServerClosed) {
@@ -213,7 +229,7 @@ func setupRedis(cfg *Config) (radix.Client, error) {
 	}
 }
 
-func setupCache(cfg *Config, cacher cache.Cacher) (cache.Cacher, error) {
+func setupCache(cfg *Config, cacher cache.Cacher, hc *health.Health) (cache.Cacher, error) {
 	if cfg.Cache == nil {
 		return cacher, nil
 	}
@@ -230,17 +246,19 @@ func setupCache(cfg *Config, cacher cache.Cacher) (cache.Cacher, error) {
 		if err != nil {
 			return nil, fmt.Errorf("redis client setup failed: %w", err)
 		}
-		return &cache.RedisCache{
+		rc := &cache.RedisCache{
 			Backed: cacher,
 			Client: redisClient,
 			TTL:    cfg.Cache.Redis.TTL,
-		}, nil
+		}
+		hc.RegisterChecker("redis-cache", rc)
+		return rc, nil
 	default:
 		return nil, fmt.Errorf("invalid cache type: %s", cfg.Cache.Type)
 	}
 }
 
-func githubClient(log *zap.Logger, cfg *Config, tracer trace.Tracer, meter metric.Meter) *github.Client {
+func githubClient(log *zap.Logger, cfg *Config, tracer trace.Tracer, meter metric.Meter, hc *health.Health) *github.Client {
 	httpClient := &http.Client{}
 
 	if cfg.Github.AccessToken != "" {
@@ -256,17 +274,19 @@ func githubClient(log *zap.Logger, cfg *Config, tracer trace.Tracer, meter metri
 		Meter:        meter,
 	}
 
-	return github.NewClient(log, github.ClientParams{
+	client := github.NewClient(log, github.ClientParams{
 		Client:                      gh.NewClient(httpClient),
 		FallbackConfidenceThreshold: cfg.Validation.ConfidenceThreshold,
 	})
+	hc.RegisterChecker("github-client", client)
+	return client
 }
 
-func goproxyClient(log *zap.Logger, cfg *Config, tracer trace.Tracer, meter metric.Meter) *goproxy.Client {
+func goproxyClient(log *zap.Logger, cfg *Config, tracer trace.Tracer, meter metric.Meter, hc *health.Health) *goproxy.Client {
 	if cfg.GoProxy.BaseURL == "" {
 		cfg.GoProxy.BaseURL = "https://proxy.golang.org"
 	}
-	return goproxy.NewClient(log, goproxy.ClientParams{
+	client := goproxy.NewClient(log, goproxy.ClientParams{
 		HTTPClient: &http.Client{
 			Transport: &observ.TraceTransport{
 				ServiceName: "goproxy",
@@ -277,6 +297,8 @@ func goproxyClient(log *zap.Logger, cfg *Config, tracer trace.Tracer, meter metr
 		BaseURL:             string(cfg.GoProxy.BaseURL),
 		ConfidenceThreshold: cfg.Validation.ConfidenceThreshold,
 	})
+	hc.RegisterChecker("goproxy-client", client)
+	return client
 }
 
 func goproxyAddrs(cfg *Config) ([]string, error) {
@@ -595,4 +617,23 @@ func setupWebhookNotifier(log *zap.Logger, cfg *Config, tracer trace.Tracer, met
 		Headers:      cfg.Validation.Webhook.Headers,
 		BodyTemplate: tpl,
 	}), nil
+}
+
+func setupHealthServer(cfg *Config, logger *zap.Logger, hc *health.Health) *http.Server {
+	if cfg.HealthServer == nil {
+		return nil
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/live", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
+	mux.Handle("/ready", hc)
+
+	return &http.Server{
+		Addr:    cfg.HealthServer.ListenAddr,
+		Handler: mux,
+		ErrorLog: func() *log.Logger {
+			l, _ := zap.NewStdLogAt(logger.With(zap.String("component", "health_server")), zap.ErrorLevel)
+			return l
+		}(),
+	}
 }

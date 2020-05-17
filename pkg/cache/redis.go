@@ -58,6 +58,15 @@ func (rc *RedisCache) ResolveLicense(ctx context.Context, m validation.Module) (
 	return ret, nil
 }
 
+func (rc *RedisCache) Check(ctx context.Context) error {
+	err := rc.Client.Do(radix.Cmd(nil, "PING"))
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	return nil
+}
+
 // MaybeEmpty is a helper for fetching not always existing keys
 // radix.MaybeNil is not suitable for HGETALL currently
 type MaybeEmpty struct {

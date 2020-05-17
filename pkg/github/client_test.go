@@ -76,31 +76,6 @@ const (
 func TestClient_ResolveLicense(t *testing.T) {
 	t.Parallel()
 	mockedServerMux := http.NewServeMux()
-	mockedServerMux.HandleFunc("/repos/test/mit/license", func(w http.ResponseWriter, r *http.Request) {
-		serveJSON(w, http.StatusOK, json.RawMessage(mitJSON))
-	})
-	mockedServerMux.HandleFunc("/repos/test/other-mit-file/license", func(w http.ResponseWriter, r *http.Request) {
-		serveJSON(w, http.StatusOK, json.RawMessage(otherJSONWithMIT))
-	})
-	mockedServerMux.HandleFunc("/repos/test/rate-limit-mit/license", func() http.HandlerFunc {
-		calls := uint32(0)
-		// simulate rate-limit each 2nd call
-		return func(w http.ResponseWriter, r *http.Request) {
-			if atomic.AddUint32(&calls, 1)&1 > 0 {
-				w.Header().Set("X-RateLimit-Limit", "60")
-				w.Header().Set("X-RateLimit-Remaining", "0")
-				w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(time.Now().Add(2*time.Second).Unix(), 10))
-
-				serveJSON(w, http.StatusForbidden, gh.ErrorResponse{
-					Message:          "API rate limit exceeded for xxx.xxx.xxx.xxx. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)",
-					DocumentationURL: "https://developer.github.com/v3/#rate-limiting",
-				})
-				return
-			}
-
-			serveJSON(w, http.StatusOK, json.RawMessage(mitJSON))
-		}
-	}())
 
 	mockedServer := httptest.NewServer(mockedServerMux)
 
@@ -108,6 +83,10 @@ func TestClient_ResolveLicense(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("resolve license ok", func(t *testing.T) {
+		mockedServerMux.HandleFunc("/repos/test/mit/license", func(w http.ResponseWriter, r *http.Request) {
+			serveJSON(w, http.StatusOK, json.RawMessage(mitJSON))
+		})
+
 		lic, err := github.NewClient(zaptest.NewLogger(t), github.ClientParams{
 			Client: ghClient,
 		}).ResolveLicense(context.Background(), validation.Module{
@@ -124,6 +103,26 @@ func TestClient_ResolveLicense(t *testing.T) {
 	})
 
 	t.Run("resolve license OK with rate limit", func(t *testing.T) {
+		mockedServerMux.HandleFunc("/repos/test/rate-limit-mit/license", func() http.HandlerFunc {
+			calls := uint32(0)
+			// simulate rate-limit each 2nd call
+			return func(w http.ResponseWriter, r *http.Request) {
+				if atomic.AddUint32(&calls, 1)&1 > 0 {
+					w.Header().Set("X-RateLimit-Limit", "60")
+					w.Header().Set("X-RateLimit-Remaining", "0")
+					w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(time.Now().Add(2*time.Second).Unix(), 10))
+
+					serveJSON(w, http.StatusForbidden, gh.ErrorResponse{
+						Message:          "API rate limit exceeded for xxx.xxx.xxx.xxx. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)",
+						DocumentationURL: "https://developer.github.com/v3/#rate-limiting",
+					})
+					return
+				}
+
+				serveJSON(w, http.StatusOK, json.RawMessage(mitJSON))
+			}
+		}())
+
 		client := github.NewClient(zaptest.NewLogger(t), github.ClientParams{
 			Client: ghClient,
 		})
@@ -147,6 +146,10 @@ func TestClient_ResolveLicense(t *testing.T) {
 	})
 
 	t.Run("resolve license fallback", func(t *testing.T) {
+		mockedServerMux.HandleFunc("/repos/test/other-mit-file/license", func(w http.ResponseWriter, r *http.Request) {
+			serveJSON(w, http.StatusOK, json.RawMessage(otherJSONWithMIT))
+		})
+
 		lic, err := github.NewClient(zaptest.NewLogger(t), github.ClientParams{
 			Client:                      ghClient,
 			FallbackConfidenceThreshold: 0.8,
@@ -161,6 +164,22 @@ func TestClient_ResolveLicense(t *testing.T) {
 				SPDXID: "MIT",
 			}, lic)
 		}
+	})
+
+	t.Run("health check", func(t *testing.T) {
+		mockedServerMux.HandleFunc("/rate_limit", func(w http.ResponseWriter, r *http.Request) {
+			serveJSON(w, http.StatusOK, gh.RateLimits{
+				Core:   &gh.Rate{Limit: 100, Remaining: 10},
+				Search: &gh.Rate{Limit: 100, Remaining: 10},
+			})
+		})
+
+		err := github.NewClient(zaptest.NewLogger(t), github.ClientParams{
+			Client:                      ghClient,
+			FallbackConfidenceThreshold: 0.8,
+		}).Check(context.Background())
+
+		assert.NoError(t, err)
 	})
 }
 
