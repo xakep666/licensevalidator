@@ -1,4 +1,4 @@
-package athens_integration_test
+package e2etests_test
 
 import (
 	"context"
