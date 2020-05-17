@@ -1,5 +1,5 @@
 ARG GO_VERSION=1.14
-ARG ALPINE_VERSION=3.9
+ARG ALPINE_VERSION=3.11
 
 FROM golang:${GO_VERSION}-alpine AS builder
 ARG GOPROXY="https://proxy.golang.org"
@@ -15,5 +15,5 @@ FROM alpine:${ALPINE_VERSION}
 RUN apk add --no-cache ca-certificates tzdata
 COPY --from=builder /bin/licensevalidator /bin/licensevalidator
 RUN licensevalidator sample-config > /etc/licensevalidator.toml
-
+USER nobody
 CMD ["licensevalidator", "--config=/etc/licensevalidator.toml"]
