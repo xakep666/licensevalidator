@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/Masterminds/semver/v3 v3.1.0
 	github.com/avvmoto/buf-readerat v0.0.0-20171115124131-a17c8cb89270
-	github.com/docker/docker v0.7.3-0.20190506211059-b20a14b54661
+	github.com/docker/docker v1.6.1 // indirect
 	github.com/google/go-github/v18 v18.2.0
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/mediocregopher/radix/v3 v3.5.0
