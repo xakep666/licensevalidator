@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/mediocregopher/radix/v3 v3.5.0
 	github.com/pelletier/go-toml v1.7.0
-	github.com/prometheus/client_golang v1.5.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/stretchr/testify v1.5.1
 	github.com/testcontainers/testcontainers-go v0.5.1
 	github.com/urfave/cli/v2 v2.2.0
@@ -22,6 +22,6 @@ require (
 	go.opentelemetry.io/otel/exporters/trace/zipkin v0.4.3
 	go.uber.org/zap v1.15.0
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
+	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
 	gopkg.in/src-d/go-license-detector.v3 v3.1.0
 )
